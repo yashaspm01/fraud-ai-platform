@@ -54,3 +54,26 @@ least-privilege access, since a leaked broad-scope token risks every repo, not j
 **Trade-offs:** Token needs manual renewal every 90 days — acceptable for a personal project.
 
 **Status:** implemented
+
+## [Week 1, Day 1] Local PostgreSQL + pgvector setup
+
+**Context:** Needed a local database with vector search support provisioned early
+(Week 1) even though RAG isn't built until Week 2, to avoid a mid-project DB migration.
+
+**Decision:** Postgres 16 + pgvector via Docker Compose (`pgvector/pgvector:pg16`),
+credentials sourced from a root-level `.env`, data persisted via a named volume.
+Runtime is actually Podman (aliased as `docker` on this machine) — noted in case
+future errors are Podman-specific rather than Docker-specific.
+
+**Incident:** First boot used `POSTGRES_USER=Yashas P M` (a personal name with
+spaces) instead of a proper service-account name, causing role-not-found errors
+on connection. Fixed by correcting `.env` to `fraud_admin` and running
+`docker compose down -v` to wipe the already-initialized (and broken) volume,
+since Postgres only runs first-time initialization on an empty data directory.
+
+**Alternatives considered:** Restarting the container without wiping the volume —
+doesn't work, since Postgres won't re-initialize an existing data directory.
+
+**Trade-offs:** None — no real data existed yet, so the wipe was free.
+
+**Status:** implemented
