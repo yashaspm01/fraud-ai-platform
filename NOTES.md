@@ -39,3 +39,18 @@ evolving system.
 **Trade-offs:** None significant at this stage.
 
 **Status:** implemented
+
+
+## [Setup] Repo pushed to GitHub
+
+**Context:** Local repo initialized with folder structure, CLAUDE.md, NOTES.md, PRD.
+
+**Decision:** Created `fraud-ai-platform` on GitHub, connected via a fine-grained
+Personal Access Token scoped to this repo only (Contents: Read/write), 90-day expiry.
+
+**Alternatives considered:** Classic PAT with broader scope — rejected in favor of
+least-privilege access, since a leaked broad-scope token risks every repo, not just this one.
+
+**Trade-offs:** Token needs manual renewal every 90 days — acceptable for a personal project.
+
+**Status:** implemented
