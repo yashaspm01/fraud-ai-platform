@@ -101,3 +101,49 @@ migration (ALTER TYPE), not just a config change — accepted deliberately, sinc
 PaySim's category set is fixed and known upfront.
 
 **Status:** implemented
+
+## [Week 1, Day 2] transactions table created
+
+**Context:** Needed the core table PaySim data will load into, before writing any
+ingestion or feature-engineering code.
+
+**Decision:** UUID primary key (non-guessable, safer default for a fraud system)
+over BIGSERIAL. ENUM for transaction_type (fixed, known PaySim category set) over
+plain TEXT, trading migration friction for write-time data quality guarantees.
+NUMERIC(15,2) for all money fields — never FLOAT. TIMESTAMPTZ throughout.
+created_on/updated_on as explicit audit columns (updated_on auto-bump-on-UPDATE
+trigger deliberately deferred — not needed until update logic exists).
+Indexed sender_account_id only — high-cardinality, frequently filtered; did NOT
+index transaction_type or is_fraud (low-cardinality, poor index selectivity).
+
+**Alternatives considered:** BIGSERIAL PK (rejected — sequential IDs leak
+information in a fraud context). TEXT for transaction_type (rejected — no
+guardrail against inconsistent values like "Transfer" vs "TRANSFER").
+
+**Trade-offs:** ENUM makes adding a genuinely new transaction type later a real
+migration (ALTER TYPE), not just a config change — accepted deliberately, since
+PaySim's category set is fixed and known upfront.
+
+**Status:** implemented
+
+## [Week 1, Day 2] Database connection debugging — three real bugs, one session
+
+**Context:** First attempt to connect Python (SQLAlchemy) to the Dockerized
+Postgres instance for a smoke test of Transaction/FraudCase models.
+
+**Bugs found and fixed, in order:**
+1. `POSTGRES_HOST=localhost` caused psycopg2 to attempt a Unix socket connection
+   instead of TCP — fixed by using `127.0.0.1` explicitly.
+2. Password contained an `@` character, which collided with the `@` delimiter
+   in the `user:password@host` connection string format, corrupting the parsed
+   host. Fixed with `urllib.parse.quote_plus()` to percent-encode the password
+   before building the URL.
+3. `fraud_cases.sql` had been discussed/written in chat but never actually
+   saved to disk or executed — `models.py` described a table that didn't exist.
+   Created the file, ran it against the DB.
+
+**Decision:** Each bug was isolated independently (connection layer vs. model
+layer vs. file-existence) via a purpose-built smoke test, rather than
+guessing/patching randomly.
+
+**Status:** implemented — full connection + both models verified working.
