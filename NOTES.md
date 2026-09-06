@@ -147,3 +147,25 @@ layer vs. file-existence) via a purpose-built smoke test, rather than
 guessing/patching randomly.
 
 **Status:** implemented — full connection + both models verified working.
+
+## [Week 1, Day 4] Data leakage caught and fixed in risk model
+
+**Context:** Initial model trained on engineered features hit Precision 1.0,
+ROC-AUC 1.0 — an implausible result for real fraud detection.
+
+**Root cause:** `sender_balance_error`, `receiver_balance_error`, and
+`sender_emptied_account` were derived from PaySim's own balance-update logic,
+which has a known artifact: fraudulent transactions in the simulator often
+zero out balances in a way that near-perfectly encodes the label itself.
+These weren't real behavioral signals — they were leaking the answer.
+
+**Decision:** Removed the three leaking features, kept `sender_balance_delta`
+(a legitimate derived feature). Retrained.
+
+**Result:** Precision 0.90, Recall 0.6552, F1 0.76, ROC-AUC 0.9996 — believable
+and defensible, though ~35% of real fraud is still missed at the default 0.5
+probability threshold. Open question for Week 1 wrap-up: whether to tune the
+decision threshold to trade some precision for higher recall, given that a
+missed fraud case is typically costlier than a false alarm.
+
+**Status:** implemented — model retrained and saved; threshold tuning pending.
