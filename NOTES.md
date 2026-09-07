@@ -206,3 +206,28 @@ to each other (top-K), never against a fixed absolute cutoff.
 to avoid a second local-model runtime doing a conceptually similar job.
 
 **Status:** implemented
+
+## [Week 2, Day 2] Document ingestion — chunking, embedding, storage
+
+**Context:** Needed real policy text in the system for RAG. Sourced the FFIEC
+BSA/AML Examination Manual (public, U.S. government document) instead of an
+invented sample, since real regulatory structure/language has more evaluation
+and portfolio value.
+
+**Incident:** First download attempt via plain `curl` silently saved an HTML
+error page instead of the real PDF (`invalid pdf header: b'<!DOC'` on parse) —
+government site blocked the request without a browser User-Agent. Fixed with
+`curl -L -A "Mozilla/5.0..."`. Caught only because we verified the file with
+`file` before trusting it — same discipline as the fraud_cases.sql incident.
+
+**Decision:** Fixed-size chunking (800 chars, 100 char overlap) via pypdf text
+extraction. Embeddings via Ollama (nomic-embed-text, 768 dimensions). Storage
+via SQLAlchemy ORM + the `pgvector` SQLAlchemy extension (`Vector(768)` column
+type) — corrected an earlier inconsistency where raw SQLAlchemy Core/text()
+was used instead of the ORM pattern established in Week 1, to keep one
+consistent data-access style across the project.
+
+**Result:** 103,918 characters extracted, 149 chunks created, all embedded and
+stored in `document_chunks`.
+
+**Status:** implemented
