@@ -183,3 +183,26 @@ reason from the business trade-off directly rather than pure statistical balance
 since F1 treats false positives/negatives as equally costly, which isn't true here.
 
 **Status:** implemented — Week 1 (Foundation) complete.
+
+## [Week 2, Day 1] Embeddings via Ollama (local, open-source)
+
+**Context:** Needed an embedding model to convert text into comparable vectors
+for RAG retrieval. Also wanted to avoid introducing a second local-model tool
+alongside the Ollama LLM fallback already planned for Week 4.
+
+**Decision:** Ollama + `nomic-embed-text` (local, free, ~274MB) — one local-model
+runtime serving both embeddings (Week 2) and LLM fallback (Week 4), instead of
+`sentence-transformers` as a separate dependency. Closes the "Open Source AI"
+gap identified from the roadmap.sh comparison.
+
+**Validation:** Cosine similarity test — related sentences ("balance dropped to
+zero" vs "funds completely withdrawn") scored 0.6638; unrelated sentence
+("weather was sunny") scored 0.4075. Correct relative ranking confirmed.
+Noted: absolute similarity values sit in a "baseline positive" zone for any
+coherent English text — retrieval must always compare candidates *relative*
+to each other (top-K), never against a fixed absolute cutoff.
+
+**Alternatives considered:** `sentence-transformers` (Hugging Face) — rejected
+to avoid a second local-model runtime doing a conceptually similar job.
+
+**Status:** implemented
