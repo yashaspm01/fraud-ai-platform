@@ -126,7 +126,7 @@ PaySim's category set is fixed and known upfront.
 
 **Status:** implemented
 
-## [Week 1, Day 2] Database connection debugging — three real bugs, one session
+## [Week 1, Day 3] Database connection debugging — three real bugs, one session
 
 **Context:** First attempt to connect Python (SQLAlchemy) to the Dockerized
 Postgres instance for a smoke test of Transaction/FraudCase models.
@@ -169,3 +169,17 @@ decision threshold to trade some precision for higher recall, given that a
 missed fraud case is typically costlier than a false alarm.
 
 **Status:** implemented — model retrained and saved; threshold tuning pending.
+
+## [Week 1, Day 5] Decision threshold finalized
+
+**Context:** Default 0.5 threshold caught only 65% of real fraud (Recall 0.6552).
+Threshold analysis swept 0.10–0.55 to see the full precision/recall trade-off.
+
+**Decision:** Set DECISION_THRESHOLD = 0.30 (Precision 0.7857, Recall 0.7586).
+Deliberately biased toward recall relative to the default, since a missed fraud
+case is typically costlier than a false alarm an analyst dismisses quickly.
+Noted but did not compute the F1-optimal threshold mathematically — chose to
+reason from the business trade-off directly rather than pure statistical balance,
+since F1 treats false positives/negatives as equally costly, which isn't true here.
+
+**Status:** implemented — Week 1 (Foundation) complete.

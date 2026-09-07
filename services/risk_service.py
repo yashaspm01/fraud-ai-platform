@@ -4,6 +4,7 @@ from pathlib import Path
 
 MODEL_DIR = Path("models/artifacts")
 
+DECISION_THRESHOLD = 0.30
 
 def load_latest_model():
     model_files = sorted(MODEL_DIR.glob("risk_model_v*.joblib"))
@@ -23,7 +24,7 @@ def score_transaction(features: dict) -> dict:
     row = row.reindex(columns=_feature_columns, fill_value=0)
 
     probability = _model.predict_proba(row)[0][1]
-    label = "HIGH_RISK" if probability >= 0.5 else "LOW_RISK"
+    label = "HIGH_RISK" if probability >= DECISION_THRESHOLD else "LOW_RISK"
 
     return {
         "risk_score": round(float(probability), 4),
