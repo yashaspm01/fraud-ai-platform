@@ -39,6 +39,13 @@ def embed(text_chunk: str) -> list[float]:
 def store_chunks(source_document: str, chunks: list[str]):
     db = SessionLocal()
     try:
+        # Idempotency: clear any existing chunks for this exact document first,
+        # so re-running ingestion (e.g. after fixing a bug, or re-processing an
+        # updated document) never silently duplicates data.
+        db.query(DocumentChunk).filter(
+            DocumentChunk.source_document == source_document
+        ).delete()
+
         for i, chunk in enumerate(chunks):
             vector = embed(chunk)
             db_chunk = DocumentChunk(

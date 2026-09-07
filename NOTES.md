@@ -231,3 +231,20 @@ consistent data-access style across the project.
 stored in `document_chunks`.
 
 **Status:** implemented
+
+## [Week 2, Day 3] First working end-to-end RAG pipeline
+
+**Context:** Combined semantic search (Day 2) with local LLM generation
+(Ollama, llama3.2) to produce grounded answers with citations.
+
+**Decision:** Prompt explicitly instructs the model to answer ONLY from
+provided context and to say so if context is insufficient — the mechanism
+enforcing groundedness, per PRD's RAG grounding requirement. Sources returned
+alongside the answer text, not just the answer, so citations are structurally
+built in rather than bolted on later.
+
+**Validation:** [FILL IN: did you manually verify each claim in the generated
+answer against the actual retrieved chunk text? What did you find?]
+
+**Status:** implemented — first full RAG loop working (retrieval → generation
+→ citations).
