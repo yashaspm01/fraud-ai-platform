@@ -2,6 +2,8 @@ from sqlalchemy import Column, String, Numeric, Boolean, DateTime, Enum, Foreign
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.sql import func
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import Integer
 
 Base = declarative_base()
 
@@ -71,3 +73,14 @@ class FraudCase(Base):
 
     created_on = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_on = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class DocumentChunk(Base):
+    __tablename__ = "document_chunks"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
+    source_document = Column(String, nullable=False)
+    chunk_index = Column(Integer, nullable=False)
+    content = Column(String, nullable=False)
+    embedding = Column(Vector(768), nullable=False)
+    created_on = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
