@@ -248,3 +248,40 @@ answer against the actual retrieved chunk text? What did you find?]
 
 **Status:** implemented — first full RAG loop working (retrieval → generation
 → citations).
+
+## [Week 2, Day 4] Grounding vs. synthesis trade-off — known model limitation
+
+**Context:** Iterated through three prompt strategies trying to get llama3.2
+to correctly (a) synthesize answers across scattered relevant chunks and
+(b) refuse when a term appears throughout the corpus but is never actually
+defined. Tested against a 3-question regression set discovered through real
+usage: "What is BSA/AML" (undefined term — should refuse), "What happens if a
+bank fails to comply" (answer scattered across chunks — should synthesize),
+"What is required of a BSA compliance officer" (clean single-chunk answer —
+baseline case).
+
+**Finding:** No single prompt version tested got all three right
+simultaneously. Strict grounding language fixed the refusal case but broke
+synthesis. Permissive/chain-of-thought prompting fixed synthesis but
+reintroduced hallucination on the refusal case — the model treats an acronym
+appearing frequently throughout retrieved chunks as license to define it from
+its own training knowledge, even when no chunk actually contains a definition.
+
+**Decision:** Kept the chain-of-thought prompt (rag/generate_answer.py),
+since it correctly handles the majority of realistic multi-chunk synthesis
+questions, which matter more for this platform's actual use case than acronym
+lookups. Documenting the "term-present-but-undefined" hallucination as a known
+limitation of llama3.2 at this prompt complexity, rather than continuing to
+iterate against a project deadline.
+
+**What would fix this properly (not implemented — time-boxed decision):**
+(1) A larger/commercial LLM, which handles this distinction more reliably.
+(2) A second verification pass: after generating an answer, ask the LLM
+(or a separate check) "is this specific claim explicitly stated in the
+source text, yes/no" before returning it to the user — real technique,
+meaningfully more engineering complexity.
+(3) A stricter glossary-style guardrail specifically for acronym/definition
+questions, detected and handled as a special case.
+
+**Status:** documented limitation — acceptable for portfolio/demo purposes,
+would need addressing before genuine production use.
