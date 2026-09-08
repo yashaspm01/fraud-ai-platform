@@ -25,12 +25,13 @@ Return ONLY a JSON array of passage numbers, ordered from MOST to LEAST
 relevant to the question. Example format: [3, 0, 4, 1, 2]
 Do not include any other text."""
 
-    response = requests.post(
-        OLLAMA_GENERATE_URL,
-        json={"model": LLM_MODEL, "prompt": prompt, "stream": False},
-    )
-    response.raise_for_status()
-    raw_output = response.json()["response"].strip()
+    try:
+        response = requests.post(OLLAMA_GENERATE_URL, json={"model": LLM_MODEL, "prompt": prompt, "stream": False}, timeout=30)
+        response.raise_for_status()
+        raw_output = response.json()["response"].strip()
+    except requests.exceptions.RequestException as e:
+        print(f"⚠️ Reranker service unavailable ({e}), falling back to original order")
+        return chunks[:top_n]
 
     try:
         ranked_indices = json.loads(raw_output)

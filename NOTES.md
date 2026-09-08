@@ -321,3 +321,79 @@ commercial model would likely need less scaffolding here.
 
 **Status:** implemented — basic agent loop working for the risk+policy
 investigation use case.
+
+## [Week 3, Day 2] Human approval gate — verified end-to-end
+
+**Context:** PRD requires state-changing actions (closing a case) to be
+blocked until explicit human approval. Needed to prove this structurally,
+not just claim it works.
+
+**Decision:** Split into two functions with different permissions:
+`request_case_closure` (callable by the agent, never sets status to CLOSED)
+and `approve_case_closure` (the only function anywhere that can set CLOSED,
+wired only to a human-facing API endpoint, never to the agent's tool list).
+
+**Bugs found along the way:**
+1. Agent initially claimed "I will close the case" in its finish summary
+   without ever calling recommend_case_closure — added a code-level check
+   comparing claimed actions against actual tool-call history, forcing
+   correction rather than trusting the model's self-report.
+2. Agent's goal string didn't include a real transaction_id, so it had
+   nothing valid to pass even when it did try to call the tool — fixed by
+   explicitly including a verified real transaction ID in the goal.
+
+**Verification:** Directly invoked request_case_closure (bypassing agent
+judgment, since a security-critical path shouldn't rely on hoping the LLM
+exercises it) → confirmed row created with status=OPEN → called
+POST /v1/approvals/{case_id} → confirmed status flipped to CLOSED only after
+that call, with notes correctly appended. Full chain verified with real
+database queries at each stage, not assumed from code review alone.
+
+**Status:** implemented and verified — the actual security control the PRD
+requires (model is never the final authority on state-changing actions) is
+now a structural fact about the codebase, not just a design intention.
+
+## [Pre-Week-4] Production hardening pass on Weeks 1-3
+
+**Context:** Before starting Week 4, audited Weeks 1-3 for gaps against the
+PRD's own Reliability/Testing requirements rather than assuming "it works"
+from manual testing alone.
+
+**Fixes applied:**
+1. Added explicit timeouts (30-60s) + graceful degradation on every Ollama
+   HTTP call (embeddings, reranking, generation, agent loop) — previously
+   any of these could hang indefinitely with no recovery.
+2. Eliminated train/serve feature skew — build_inference_features() is now
+   the single source of truth used by both training and the live API,
+   replacing duplicated inline logic in apps/main.py that could have
+   silently drifted (it still referenced a removed leaky feature).
+3. Added input validation bounds (length, top_k range) on /v1/search and
+   /v1/ask — previously unbounded.
+4. Added basic structured logging (success/failure per endpoint) — replacing
+   raw SQL echo noise as the only visibility into request handling.
+5. Built first real test suite (9 tests): feature engineering shape +
+   leakage-regression guard, model sanity check, RAG duplicate-regression
+   guard, agent tool contract checks, DB constraint enforcement. Required
+   pytest.ini with pythonpath=. — same root-import issue as every prior
+   `-m module` fix this project has hit, now solved once, centrally.
+
+**Status:** implemented — all 9 tests passing. Weeks 1-3 now have real
+regression protection against every major bug found this week, not just
+manual verification.
+
+## [Pre-Week-4] Model explainability endpoint
+
+**Context:** PRD lists "feature importances on request" as an Explainability
+requirement (Development Target, NFR table).
+
+**Decision:** GET /v1/risk/explain returns global feature importances from
+the trained RandomForest (model.feature_importances_) — not a per-transaction
+explanation (would require SHAP, deferred as Post-MVP given time/complexity).
+
+**Validation:** Rankings pass a domain sanity check — sender_balance_delta,
+amount, and balance fields dominate, consistent with legitimate fraud signal
+post-leakage-fix. day_of_week scored exactly 0.0 — plausible, since PaySim's
+30-day simulation likely has no real weekly pattern to learn; not treated as
+a bug.
+
+**Status:** implemented

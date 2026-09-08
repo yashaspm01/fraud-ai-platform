@@ -39,6 +39,12 @@ Observation actually told you, and whether you already have enough
 information to finish. Do not repeat an action you've already taken with the
 same inputs — use the result you already have instead.
 
+IMPORTANT: If your conclusion involves closing a case, you MUST call the
+recommend_case_closure tool BEFORE you finish. Do not say you will take an
+action in your finish summary without having actually called the
+corresponding tool first. Your finish summary must describe what you
+ACTUALLY did (tool calls made), not what you intend to do.
+
 Respond in EXACTLY this format for your next step:
 
 Thought: <your reasoning, explicitly referencing relevant observations above>
@@ -72,10 +78,15 @@ def run_agent(goal: str):
         prompt = build_prompt(goal, history)
         if duplicate_count >= 1:
             prompt += "\n\nIMPORTANT: You have already tried this exact question and it failed. You now have enough information to finish. Your next Action MUST be 'finish'."
+        try:
+            response = requests.post(OLLAMA_GENERATE_URL, json={"model": LLM_MODEL, "prompt": prompt, "stream": False}, timeout=60)
+            response.raise_for_status()
+            raw_text = response.json()["response"]
+        except requests.exceptions.RequestException as e:
+            print(f"⚠️ LLM service unavailable at step {step_num + 1}: {e}")
+            return f"Investigation incomplete — LLM service unavailable ({e})", history
 
-        response = requests.post(OLLAMA_GENERATE_URL, json={"model": LLM_MODEL, "prompt": prompt, "stream": False})
-        response.raise_for_status()
-        raw_text = response.json()["response"]
+
         print(f"\n[RAW LLM OUTPUT]\n{raw_text}\n[END RAW]\n")
 
         thought, action, action_input = parse_response(raw_text)
@@ -83,6 +94,21 @@ def run_agent(goal: str):
 
         if action.lower() == "finish":
             summary = action_input.get("summary") or thought or "No summary provided."
+
+            actions_taken = [h["action"] for h in history]
+            mentions_closure = "clos" in summary.lower()
+            actually_recommended = "recommend_case_closure" in actions_taken
+
+            if mentions_closure and not actually_recommended:
+                observation = {
+                    "error": "STOP. You cannot finish yet. Your very next Action "
+                             "must be exactly: recommend_case_closure, with "
+                             "transaction_id and recommendation as arguments. "
+                             "Do not use 'finish' again until you have done this."
+                }
+                history.append({"thought": thought, "action": action, "action_input": action_input, "observation": observation})
+                continue
+
             print(f"\n✅ FINAL: {summary}")
             return summary, history
 
@@ -103,5 +129,6 @@ def run_agent(goal: str):
     return None, history
 
 if __name__ == "__main__":
-    goal = "Investigate this transaction: amount=8000, sender_balance_before=8000, sender_balance_after=0, hour_of_day=2. Is this risky, and what does policy say about handling high-risk transactions?"
+    transaction_id = "ab1c9198-0322-44eb-b848-b00e290dc033"
+    goal = f"Investigate the transaction with id {transaction_id}: amount=8000, sender_balance_before=8000, sender_balance_after=0, hour_of_day=2. Determine the risk, check relevant policy, and if you conclude the case should be closed, you MUST call recommend_case_closure with this transaction_id and your reasoning."
     run_agent(goal)

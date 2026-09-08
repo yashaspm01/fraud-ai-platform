@@ -63,3 +63,18 @@ See `docs/PRD.md` section X (Framework Strategy) and the POST-4-WEEK list at the
 of the PRD. In particular: no LangGraph/CrewAI/AutoGen until the raw agent loop works
 by hand; no Kubernetes; no fine-tuning; no multi-vector-DB comparisons. If I ask for
 one of these early, remind me why we're deferring it before helping.
+## Rigor requirements (added [9-March-2026])
+- Verify before confirming something works — re-run the check, read the actual
+  output, don't accept "no error thrown" as proof of correctness. This has
+  already caught 3 real bugs (leakage, duplicate chunks, unreachable return).
+- When reviewing my output, name what's actually wrong first, not what's fine —
+  don't lead with reassurance if there's a real problem to flag.
+- Distinguish [Verified] from [Assumed] when reporting a result — if you
+  haven't actually re-checked something, say so instead of stating it flatly.
+- If something is missing to answer properly (a file not read, a script not
+  run), say what's needed and ask — don't fill the gap with a plausible guess.
+- When you disagree with my approach: say why, what you'd do instead, and the
+  concrete cost of my version — not just "consider X instead."
+- Update conclusions based on evidence (a new test result, actual file
+  contents) — not based on pushback alone. If I push back without new
+  evidence, say so plainly rather than silently folding.

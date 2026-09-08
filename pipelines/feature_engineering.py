@@ -8,6 +8,34 @@ def load_raw_data() -> pd.DataFrame:
     query = "SELECT * FROM transactions;"
     return pd.read_sql(query, engine)
 
+def build_inference_features(raw: dict) -> dict:
+    """
+    Single-transaction feature engineering for real-time inference.
+    Mirrors engineer_features() exactly, so training and serving can never
+    silently drift apart — one function, two callers (training pipeline
+    reads from the DB in bulk; the API calls this directly per-request).
+    """
+    amount = raw["amount"]
+    sender_before = raw["sender_balance_before"]
+    sender_after = raw["sender_balance_after"]
+    hour = raw["hour_of_day"]
+
+    features = {
+        "amount": amount,
+        "sender_balance_before": sender_before,
+        "sender_balance_after": sender_after,
+        "receiver_balance_before": raw["receiver_balance_before"],
+        "receiver_balance_after": raw["receiver_balance_after"],
+        "sender_balance_delta": sender_before - sender_after,
+        "hour_of_day": hour,
+        "is_night": 1 if (hour < 6 or hour >= 22) else 0,
+        "day_of_week": raw["day_of_week"],
+    }
+
+    for t in ["CASH_IN", "CASH_OUT", "DEBIT", "PAYMENT", "TRANSFER"]:
+        features[f"type_{t}"] = 1 if raw["transaction_type"] == t else 0
+
+    return features
 
 def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
