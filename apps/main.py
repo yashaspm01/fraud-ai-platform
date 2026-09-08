@@ -1,11 +1,19 @@
+import logging
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from services.risk_service import score_transaction
 from rag.generate_answer import generate_answer
+from agents.approval import approve_case_closure
+from pipelines.feature_engineering import build_inference_features
+from services.risk_service import get_feature_importance,model_version
+
 
 app = FastAPI(title="Fraud Risk Scoring Service")
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+logger = logging.getLogger("fraud_ops")
 
 class RiskRequest(BaseModel):
     amount: float = Field(..., gt=0)
@@ -26,6 +34,16 @@ class AskRequest(BaseModel):
     question: str
 
 
+class ApprovalRequest(BaseModel):
+    approved: bool
+
+class SearchRequest(BaseModel):
+    query: str = Field(..., min_length=1, max_length=500)
+    top_k: int = Field(5, ge=1, le=20)
+
+class AskRequest(BaseModel):
+    question: str = Field(..., min_length=1, max_length=500)
+
 @app.get("/v1/health")
 def health():
     return {"status": "ok"}
@@ -34,24 +52,19 @@ def health():
 @app.post("/v1/risk")
 def get_risk_score(request: RiskRequest):
     try:
-        features = request.model_dump()
-        tx_type = features.pop("transaction_type")
-
-        features["sender_balance_delta"] = (
-            features["sender_balance_before"] - features["sender_balance_after"]
-        )
-        features["sender_emptied_account"] = int(features["sender_balance_after"] == 0)
-        features["is_night"] = int(features["hour_of_day"] < 6 or features["hour_of_day"] >= 22)
-        features[f"type_{tx_type}"] = 1
-
-        return score_transaction(features)
+        features = build_inference_features(request.model_dump())
+        result = score_transaction(features)
+        logger.info(f"risk_scored amount={request.amount} label={result['label']} score={result['risk_score']}")
+        return result
     except Exception as e:
+        logger.error(f"risk_scoring_failed error={e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/v1/search")
 def search_documents(request: SearchRequest):
     from rag.search import semantic_search
     results = semantic_search(request.query, top_k=request.top_k)
+    logger.info(f"risk_scored amount={request.amount} label={result['label']} score={result['risk_score']}")
     return {
         "results": [
             {"source": r.source_document, "chunk_index": r.chunk_index, "content": r.content}
@@ -70,3 +83,13 @@ def ask_question(request: AskRequest):
             for s in sources
         ],
     }
+
+
+@app.post("/v1/approvals/{case_id}")
+def approve_case(case_id: str, request: ApprovalRequest):
+    result = approve_case_closure(case_id, request.approved)
+    return result
+
+@app.get("/v1/risk/explain")
+def explain_model():
+    return {"model_version": model_version, "feature_importances": get_feature_importance()}

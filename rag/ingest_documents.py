@@ -31,10 +31,12 @@ def chunk_text(text_content: str, chunk_size: int, overlap: int) -> list[str]:
 
 
 def embed(text_chunk: str) -> list[float]:
-    response = requests.post(OLLAMA_URL, json={"model": EMBED_MODEL, "prompt": text_chunk})
-    response.raise_for_status()
-    return response.json()["embedding"]
-
+    try:
+        response = requests.post(OLLAMA_URL, json={"model": EMBED_MODEL, "prompt": text_chunk}, timeout=30)
+        response.raise_for_status()
+        return response.json()["embedding"]
+    except requests.exceptions.RequestException as e:
+        raise RuntimeError(f"Embedding service unavailable: {e}")
 
 def store_chunks(source_document: str, chunks: list[str]):
     db = SessionLocal()

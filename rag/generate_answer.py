@@ -40,11 +40,11 @@ def generate_answer(question: str, retrieve_k: int = 15, final_k: int = 5):
 
     prompt = build_prompt(question, chunks)
 
-    response = requests.post(
-        OLLAMA_GENERATE_URL,
-        json={"model": LLM_MODEL, "prompt": prompt, "stream": False},
-    )
-    response.raise_for_status()
+    try:
+        response = requests.post(OLLAMA_GENERATE_URL, json={"model": LLM_MODEL, "prompt": prompt, "stream": False}, timeout=60)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        return f"I don't have enough information in the provided documents to answer that. (Service temporarily unavailable: {e})", chunks
 
     raw_output = response.json()["response"]
     if "Answer:" in raw_output:
