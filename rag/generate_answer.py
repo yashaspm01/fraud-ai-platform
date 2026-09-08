@@ -30,13 +30,13 @@ Format your response as:
 Relevant passages: [your list]
 Answer: [your answer]"""
 
-def generate_answer(question: str, retrieve_k: int = 15, final_k: int = 5) -> str:
+def generate_answer(question: str, retrieve_k: int = 15, final_k: int = 5):
     candidates = semantic_search(question, top_k=retrieve_k)
     chunks = rerank(question, candidates, top_n=final_k)
 
     print("DEBUG - Chunks after reranking:")
     for c in chunks:
-        print(f"  chunk #{c.chunk_index}: {c.content[:80]}")
+        print(f"chunk #{c.chunk_index}: {c.content[:80]}")
 
     prompt = build_prompt(question, chunks)
 
@@ -45,7 +45,14 @@ def generate_answer(question: str, retrieve_k: int = 15, final_k: int = 5) -> st
         json={"model": LLM_MODEL, "prompt": prompt, "stream": False},
     )
     response.raise_for_status()
-    return response.json()["response"], chunks
+
+    raw_output = response.json()["response"]
+    if "Answer:" in raw_output:
+        clean_answer = raw_output.split("Answer:", 1)[1].strip()
+    else:
+        clean_answer = raw_output.strip()
+
+    return clean_answer, chunks
 
 if __name__ == "__main__":
     question = "A bank's independent testing confirms that its written BSA/AML policies are comprehensive, but transaction testing reveals that employees routinely fail to follow those policies. How should an examiner interpret this situation?"

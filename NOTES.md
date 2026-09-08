@@ -285,3 +285,39 @@ questions, detected and handled as a special case.
 
 **Status:** documented limitation — acceptable for portfolio/demo purposes,
 would need addressing before genuine production use.
+
+## [Week 3, Day 1] First working agent loop (ReAct pattern, hand-rolled)
+
+**Context:** Built the agent loop by hand (per PRD Framework Strategy — raw
+loop before any framework), wrapping Week 1's risk scoring and Week 2's RAG
+as callable tools.
+
+**Iterations and findings:**
+1. First run: agent called get_risk_score 4 times with identical arguments,
+   never used the actual score value in its reasoning, never reached "finish"
+   before MAX_STEPS. Root cause: no duplicate-action detection, no explicit
+   prompt instruction to use prior observations.
+2. Added duplicate-action detection (tracked via a set of (action, args)
+   signatures) and explicit "reference the most recent Observation" prompt
+   instruction. Result: duplicates stopped, reasoning correctly referenced
+   the real risk score — but agent got stuck rephrasing an unanswerable
+   policy question 3 times, still hit MAX_STEPS.
+3. Added forceful instruction injection ("your next Action MUST be finish")
+   triggered after the first blocked duplicate. Final run: clean 2-step
+   execution, correct risk-score usage, proper finish with valid summary.
+
+**Known limitation (undertested):** the forceful "must finish" injection
+was built and is logically sound, but the clean final run succeeded before
+that mechanism was ever triggered — it has not been directly proven to work
+under real failure conditions, only inferred from the plain duplicate-block
+behavior observed in iteration 2. Acceptable gap given timeline; would want
+a dedicated test forcing this path before calling it production-verified.
+
+**Broader finding:** llama3.2 (3B, local) can articulate correct reasoning
+("I should not repeat this action") without that reasoning reliably
+constraining its next output — required explicit, forceful instruction
+injection rather than persuasive/explanatory prompting alone. A larger or
+commercial model would likely need less scaffolding here.
+
+**Status:** implemented — basic agent loop working for the risk+policy
+investigation use case.

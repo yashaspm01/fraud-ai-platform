@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from services.risk_service import score_transaction
+from rag.generate_answer import generate_answer
 
 app = FastAPI(title="Fraud Risk Scoring Service")
 
@@ -15,6 +16,14 @@ class RiskRequest(BaseModel):
     hour_of_day: int = Field(..., ge=0, le=23)
     day_of_week: int = Field(..., ge=0, le=6)
     transaction_type: str
+
+class SearchRequest(BaseModel):
+    query: str
+    top_k: int = 5
+
+
+class AskRequest(BaseModel):
+    question: str
 
 
 @app.get("/v1/health")
@@ -38,3 +47,26 @@ def get_risk_score(request: RiskRequest):
         return score_transaction(features)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/v1/search")
+def search_documents(request: SearchRequest):
+    from rag.search import semantic_search
+    results = semantic_search(request.query, top_k=request.top_k)
+    return {
+        "results": [
+            {"source": r.source_document, "chunk_index": r.chunk_index, "content": r.content}
+            for r in results
+        ]
+    }
+
+
+@app.post("/v1/ask")
+def ask_question(request: AskRequest):
+    answer, sources = generate_answer(request.question)
+    return {
+        "answer": answer,
+        "sources": [
+            {"source": s.source_document, "chunk_index": s.chunk_index}
+            for s in sources
+        ],
+    }
