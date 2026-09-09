@@ -18,6 +18,23 @@ def semantic_search(query: str, top_k: int = 5):
     finally:
         db.close()
 
+def semantic_search_with_scores(query: str, top_k: int = 15):
+    query_vector = embed(query)
+    db = SessionLocal()
+    try:
+        results = (
+            db.query(
+                DocumentChunk,
+                DocumentChunk.embedding.cosine_distance(query_vector).label("distance"),
+            )
+            .order_by("distance")
+            .limit(top_k)
+            .all()
+        )
+        return results
+    finally:
+        db.close()
+
 
 if __name__ == "__main__":
     query = "What is required of a BSA compliance officer?"

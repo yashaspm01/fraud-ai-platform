@@ -1,6 +1,6 @@
 # agents/approval.py
 from database.connection import SessionLocal
-from database.models import FraudCase
+from database.models import FraudCase, Transaction
 import uuid
 
 
@@ -12,6 +12,10 @@ def request_case_closure(transaction_id: str, recommendation: str) -> dict:
     """
     db = SessionLocal()
     try:
+        tx_exists = db.query(Transaction).filter(Transaction.id == uuid.UUID(transaction_id)).first()
+        if not tx_exists:
+            return {"error": f"Transaction {transaction_id} does not exist. Cannot recommend closure."}
+
         case = FraudCase(
             transaction_id=uuid.UUID(transaction_id),
             status="OPEN",  # stays OPEN — NOT closed yet
@@ -27,7 +31,6 @@ def request_case_closure(transaction_id: str, recommendation: str) -> dict:
         }
     finally:
         db.close()
-
 
 def approve_case_closure(case_id: str, approved: bool) -> dict:
     """
