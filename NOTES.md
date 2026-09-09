@@ -397,3 +397,22 @@ post-leakage-fix. day_of_week scored exactly 0.0 — plausible, since PaySim's
 a bug.
 
 **Status:** implemented
+
+## [Week 4, Day 1] Application containerized
+
+**Context:** App had only ever run locally in the venv — no reproducibility
+guarantee, unlike the database which has been Dockerized since Week 1.
+
+**Decision:** Dockerfile (python:3.11-slim, layered requirements.txt install
+for build-cache efficiency), network_mode: host so existing 127.0.0.1-based
+connection strings (Postgres, Ollama) work unchanged inside the container —
+a deliberate dev-scope simplification, not how a multi-service cloud
+deployment would be networked. Root-level docker-compose.yml runs app+db
+together; duplicates the db service already defined in infrastructure/ —
+known duplication, acceptable for now, worth consolidating later.
+
+**Verification:** Confirmed via `docker ps` (both containers Up) before
+trusting curl responses — first attempt risked a false positive, since an
+old local uvicorn process could have produced an identical response.
+
+**Status:** implemented — app and db both running containerized.
