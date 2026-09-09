@@ -1,0 +1,13 @@
+BSA (Bank Secrecy Act): A U.S. federal law enacted in 1970 that requires financial institutions to assist government agencies in detecting and preventing money laundering. It requires banks to keep records and file reports that are useful in criminal, tax, and regulatory investigations.
+
+AML (Anti-Money Laundering): A set of laws, regulations, and procedures intended to prevent criminals from disguising illegally obtained funds as legitimate income. BSA/AML together refer to the combined framework of U.S. anti-money-laundering law and the compliance programs banks must run to follow it.
+
+SAR (Suspicious Activity Report): A document that financial institutions must file with FinCEN when they detect a transaction or pattern of activity that appears suspicious, such as potential money laundering, fraud, or terrorist financing.
+
+CTR (Currency Transaction Report): A report that financial institutions must file with FinCEN for any cash transaction exceeding $10,000 in a single business day.
+
+ML/TF (Money Laundering / Terrorist Financing): The two primary categories of illicit financial activity that BSA/AML compliance programs are designed to detect and prevent. Money laundering disguises the origin of illegally obtained funds; terrorist financing provides funds to support terrorist activity, regardless of whether the funds themselves came from legal or illegal sources.
+
+KYC (Know Your Customer): The process by which a financial institution verifies the identity of its customers, as part of its broader customer due diligence obligations under BSA/AML regulations.
+
+OFAC (Office of Foreign Assets Control): A U.S. Treasury Department agency that administers economic sanctions programs, primarily against foreign countries, entities, and individuals. Banks screen customers and transactions against OFAC's sanctions lists as part of compliance.

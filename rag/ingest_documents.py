@@ -12,13 +12,15 @@ CHUNK_SIZE = 800      # characters per chunk
 CHUNK_OVERLAP = 100   # characters shared between consecutive chunks
 
 
-def extract_text(pdf_path: Path) -> str:
-    reader = PdfReader(pdf_path)
+def extract_text(file_path: Path) -> str:
+    if file_path.suffix == ".txt":
+        return file_path.read_text()
+
+    reader = PdfReader(file_path)
     full_text = ""
     for page in reader.pages:
         full_text += page.extract_text() + "\n"
     return full_text
-
 
 def chunk_text(text_content: str, chunk_size: int, overlap: int) -> list[str]:
     chunks = []
@@ -63,17 +65,16 @@ def store_chunks(source_document: str, chunks: list[str]):
 
 
 if __name__ == "__main__":
-    pdf_path = Path("rag/documents/bsa_aml_manual.pdf")
+    documents_dir = Path("rag/documents")
+    doc_files = list(documents_dir.glob("*.pdf")) + list(documents_dir.glob("*.txt"))
 
-    print("Extracting text...")
-    raw_text = extract_text(pdf_path)
-    print(f"  → {len(raw_text):,} characters extracted")
+    for doc_path in doc_files:
+        print(f"\n--- Processing {doc_path.name} ---")
+        raw_text = extract_text(doc_path)
+        print(f"  → {len(raw_text):,} characters extracted")
 
-    print("Chunking...")
-    chunks = chunk_text(raw_text, CHUNK_SIZE, CHUNK_OVERLAP)
-    print(f"  → {len(chunks)} chunks created")
+        chunks = chunk_text(raw_text, CHUNK_SIZE, CHUNK_OVERLAP)
+        print(f"  → {len(chunks)} chunks created")
 
-    print("Embedding and storing (this calls Ollama once per chunk — may take a bit)...")
-    store_chunks(pdf_path.name, chunks)
-
-    print("✅ Done.")
+        store_chunks(doc_path.name, chunks)
+        print(f"✅ Done with {doc_path.name}")
