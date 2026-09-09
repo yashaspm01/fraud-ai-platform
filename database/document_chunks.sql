@@ -1,3 +1,6 @@
+
+CREATE EXTENSION IF NOT EXISTS vector;
+
 CREATE TABLE document_chunks (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     source_document TEXT NOT NULL,
