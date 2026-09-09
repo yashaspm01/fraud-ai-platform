@@ -1,0 +1,24 @@
+services:
+  app:
+    build: .
+    container_name: fraud_ops_app
+    network_mode: host
+    env_file:
+      - .env
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: fraud_ops_db
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "5432:5432"
+    volumes:
+      - fraud_ops_pgdata:/var/lib/postgresql/data
+
+volumes:
+  fraud_ops_pgdata:
