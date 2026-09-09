@@ -416,3 +416,51 @@ trusting curl responses — first attempt risked a false positive, since an
 old local uvicorn process could have produced an identical response.
 
 **Status:** implemented — app and db both running containerized.
+
+## [Week 4, Day 1] API key authentication implemented + verified
+
+**Context:** PRD requires authentication on every endpoint except /health.
+No auth existed on any endpoint prior to this.
+
+**Decision:** Single shared API key via required X-API-Key header, checked
+by a verify_api_key dependency applied explicitly per-route (not global
+middleware) — deliberate choice so every protected route visibly declares
+its own auth requirement. Key generated via secrets.token_urlsafe(32), not
+uuid4, since secrets is specifically designed for cryptographic tokens.
+
+**Verification (all four real cases tested):**
+- Missing header → 422 (FastAPI's own request validation layer rejects
+  before verify_api_key ever runs)
+- Wrong header value → 401 (reaches verify_api_key, correctly rejected)
+- Correct key → 200 with real data
+- /v1/health → 200 with no key required, as specified
+
+**Status:** implemented and verified across all real request scenarios, not
+just the happy path.
+
+## [Week 4, Day 1] Podman/WSL storage corruption — full incident, resolved
+
+**Context:** docker compose down left fraud_ops_app in a broken overlay
+storage state. Escalating fixes attempted: podman rm -f (failed), lazy
+unmount (needed), podman system prune -a --volumes (wiped DB volume),
+ultimately required manual mount cleanup + storage-level container removal.
+
+**Consequence:** Postgres volume wiped entirely (transactions, fraud_cases,
+document_chunks all emptied). Additionally surfaced a real infra-as-code gap:
+the pgvector extension had only ever been enabled manually via a one-off
+`CREATE EXTENSION` typed at a psql prompt in Week 1 — never captured in any
+tracked .sql file — so document_chunks.sql failed on the fresh database
+until this was fixed by adding the extension statement directly into the
+tracked file.
+
+**Recovery:** Recreated schema from tracked SQL files, redownloaded PaySim
+CSV (also lost — was gitignored, not backed up elsewhere) via
+scripts/download_data.py, re-ran both ingestion pipelines. All data fully
+recoverable from source; nothing irreplaceable was lost, but the incident
+revealed real gaps (undocumented manual setup step, no backup path for the
+CSV) worth having found and fixed now rather than during Friday's actual
+Week 4 deadline work.
+
+**Status:** resolved. pgvector extension now properly tracked in
+document_chunks.sql. Real lesson: /mnt/d/ (Windows-mounted drive) has
+demonstrated genuine Podman storage risk beyond slow I/O.

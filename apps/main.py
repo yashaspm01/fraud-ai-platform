@@ -1,6 +1,7 @@
 import logging
+import os
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 
 from services.risk_service import score_transaction
@@ -14,6 +15,8 @@ app = FastAPI(title="Fraud Risk Scoring Service")
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("fraud_ops")
+
+API_KEY = os.getenv("API_KEY")
 
 class RiskRequest(BaseModel):
     amount: float = Field(..., gt=0)
@@ -48,8 +51,11 @@ class AskRequest(BaseModel):
 def health():
     return {"status": "ok"}
 
+def verify_api_key(x_api_key: str = Header(...)):
+    if x_api_key != API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
-@app.post("/v1/risk")
+@app.post("/v1/risk", dependencies=[Depends(verify_api_key)])
 def get_risk_score(request: RiskRequest):
     try:
         features = build_inference_features(request.model_dump())
@@ -60,7 +66,7 @@ def get_risk_score(request: RiskRequest):
         logger.error(f"risk_scoring_failed error={e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/v1/search")
+@app.post("/v1/search", dependencies=[Depends(verify_api_key)])
 def search_documents(request: SearchRequest):
     from rag.search import semantic_search
     results = semantic_search(request.query, top_k=request.top_k)
@@ -73,7 +79,7 @@ def search_documents(request: SearchRequest):
     }
 
 
-@app.post("/v1/ask")
+@app.post("/v1/ask", dependencies=[Depends(verify_api_key)])
 def ask_question(request: AskRequest):
     answer, sources = generate_answer(request.question)
     return {
@@ -85,11 +91,11 @@ def ask_question(request: AskRequest):
     }
 
 
-@app.post("/v1/approvals/{case_id}")
+@app.post("/v1/approvals/{case_id}", dependencies=[Depends(verify_api_key)])
 def approve_case(case_id: str, request: ApprovalRequest):
     result = approve_case_closure(case_id, request.approved)
     return result
 
-@app.get("/v1/risk/explain")
+@app.get("/v1/risk/explain", dependencies=[Depends(verify_api_key)])
 def explain_model():
     return {"model_version": model_version, "feature_importances": get_feature_importance()}
