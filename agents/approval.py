@@ -1,7 +1,11 @@
 # agents/approval.py
 from database.connection import SessionLocal
 from database.models import FraudCase, Transaction
+
 import uuid
+import logging
+
+logger = logging.getLogger("fraud_ops")
 
 
 def request_case_closure(transaction_id: str, recommendation: str) -> dict:
@@ -33,14 +37,11 @@ def request_case_closure(transaction_id: str, recommendation: str) -> dict:
         db.close()
 
 def approve_case_closure(case_id: str, approved: bool) -> dict:
-    """
-    This is the ONLY function that can actually change a case's status.
-    Called by a human, via the API — never by the agent itself.
-    """
     db = SessionLocal()
     try:
         case = db.query(FraudCase).filter(FraudCase.id == uuid.UUID(case_id)).first()
         if not case:
+            logger.warning(f"approval_failed case_id={case_id} reason=not_found")
             return {"error": "Case not found"}
 
         if approved:
@@ -51,6 +52,7 @@ def approve_case_closure(case_id: str, approved: bool) -> dict:
             case.notes += " | REJECTED by human reviewer — remains open."
 
         db.commit()
+        logger.info(f"case_approval_processed case_id={case_id} approved={approved} new_status={case.status}")
         return {"case_id": case_id, "new_status": case.status}
     finally:
         db.close()

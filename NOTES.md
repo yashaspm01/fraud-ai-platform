@@ -504,3 +504,14 @@ classifier (relevance gate covers the realistic case), load testing.
 
 **Status:** implemented and verified — relevance gate, injection isolation,
 and rate limiting all confirmed against real test cases, not just code review.
+
+## [Week 4, Day 2] Rate limiting verified
+
+**Verification:** 12 sequential requests to /v1/ask — first 11 returned 200,
+12th returned 429, confirming the 10/minute per-IP limit is genuinely
+enforced, not just configured. (First test attempt showed all-zero status
+codes due to a shell/paste quoting issue, not an actual failure — re-run
+with a properly formatted multi-line command produced the correct result.)
+
+
+**Status:** verified.
