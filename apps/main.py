@@ -5,6 +5,9 @@ from pydantic import BaseModel, Field
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from fastapi.middleware.cors import CORSMiddleware
+from database.connection import SessionLocal
+from database.models import FraudCase
 
 from services.risk_service import score_transaction, get_feature_importance, model_version
 from rag.generate_answer import generate_answer
@@ -22,6 +25,13 @@ API_KEY = os.getenv("API_KEY")
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # fine for local demo; would be locked to a real domain in production
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class RiskRequest(BaseModel):
@@ -117,3 +127,12 @@ def approve_case(case_id: str, request_body: ApprovalRequest):
 @app.get("/v1/risk/explain", dependencies=[Depends(verify_api_key)])
 def explain_model():
     return {"model_version": model_version, "feature_importances": get_feature_importance()}
+
+@app.get("/v1/cases/pending", dependencies=[Depends(verify_api_key)])
+def list_pending_cases():
+    db = SessionLocal()
+    try:
+        cases = db.query(FraudCase).filter(FraudCase.status.in_(["OPEN", "INVESTIGATING"])).all()
+        return [{"id": str(c.id), "status": c.status, "notes": c.notes} for c in cases]
+    finally:
+        db.close()
