@@ -515,3 +515,29 @@ with a properly formatted multi-line command produced the correct result.)
 
 
 **Status:** verified.
+
+## [Week 4] Prompt bug found: placeholder text was live in production prompt
+
+**Context:** During safety-refusal debugging, discovered build_prompt()
+contained the literal string "[rest of your existing prompt instructions]"
+instead of the actual grounding rules — a copy-paste artifact where
+shorthand from conversation got pasted into the file verbatim. The real
+Step 1/Step 2 grounding instructions were missing from every live request
+since the last edit. Also found rewrite_query() was called but its result
+was discarded — hybrid_search ran on the original, unrewritten question.
+
+**Fix:** Full file rewrite restoring the real grounding prompt, correctly
+wiring rewritten_question into hybrid_search, factoring the LLM call into
+_call_llm() so the safety-refusal retry can reuse it cleanly.
+
+**Verification:** Full 4-question regression set re-run. Garbled/typo
+question now correctly refuses (previously safety-misfired). Injection
+attempt tested twice — different wording each time (LLM sampling isn't
+deterministic) but never complied with the injected instruction in either
+run, confirming the security property holds even when surface wording
+varies. Judged consistency-of-wording vs. security-of-behavior as separate
+concerns — the latter is what matters and is confirmed stable.
+
+**Status:** resolved. Real bug was a stray placeholder string, not a
+prompt-engineering shortfall — worth remembering to grep for that pattern
+after any prompt edit going forward.
