@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Fraud &amp; Risk Operations — Console</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/motion@11.11.13/dist/motion.js"></script>
+<style>
+  body { background:#10141C; font-family:'IBM Plex Sans', sans-serif; color:#E7EAF0; }
+  .mono { font-family:'IBM Plex Mono', monospace; }
+  .panel { background:#161B26; border:1px solid #232A38; border-radius:10px; }
+  .field { background:#0D1017; border:1px solid #2A3140; border-radius:6px; color:#E7EAF0; }
+  .field:focus { outline:none; border-color:#4A5A78; }
+  .btn { background:#2C64F0; border-radius:6px; font-weight:600; transition:background .15s ease; }
+  .btn:hover { background:#3D74FF; }
+  .btn:disabled { background:#2A3140; cursor:not-allowed; }
+  .risk-high { color:#E8A23D; border-color:#E8A23D33; background:#E8A23D14; }
+  .risk-low { color:#3DDC97; border-color:#3DDC9733; background:#3DDC9714; }
+  .bar-track { background:#0D1017; border-radius:4px; overflow:hidden; }
+  .bar-fill { background:#4A6CF0; height:100%; border-radius:4px; }
+  ::placeholder { color:#5A6478; }
+</style>
+</head>
+<body class="min-h-screen px-6 py-6">
+
+  <!-- Header -->
+  <header class="flex items-center justify-between max-w-7xl mx-auto mb-6">
+    <div>
+      <h1 class="text-lg font-semibold tracking-tight">Fraud &amp; Risk Operations</h1>
+      <p class="text-sm text-[#7A8499]">Scoring · Compliance knowledge · Investigation</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <span id="statusDot" class="w-2.5 h-2.5 rounded-full bg-[#5A6478]"></span>
+      <span id="statusText" class="text-sm text-[#7A8499]">checking backend…</span>
+      <input id="apiKey" type="password" placeholder="X-API-Key"
+        class="field text-sm mono px-3 py-1.5 w-56" />
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+    <!-- Risk scoring -->
+    <section class="panel p-5">
+      <h2 class="font-semibold mb-1">Transaction Risk Score</h2>
+      <p class="text-sm text-[#7A8499] mb-4">Score a transaction against the trained fraud model.</p>
+
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <label class="text-sm text-[#9AA4B8]">Amount
+          <input id="amount" type="number" value="8000" class="field w-full mt-1 px-3 py-2 mono text-sm" />
+        </label>
+        <label class="text-sm text-[#9AA4B8]">Type
+          <select id="txType" class="field w-full mt-1 px-3 py-2 text-sm">
+            <option>TRANSFER</option><option>CASH_OUT</option><option>CASH_IN</option>
+            <option>PAYMENT</option><option>DEBIT</option>
+          </select>
+        </label>
+        <label class="text-sm text-[#9AA4B8]">Sender balance before
+          <input id="senderBefore" type="number" value="8000" class="field w-full mt-1 px-3 py-2 mono text-sm" />
+        </label>
+        <label class="text-sm text-[#9AA4B8]">Sender balance after
+          <input id="senderAfter" type="number" value="0" class="field w-full mt-1 px-3 py-2 mono text-sm" />
+        </label>
+        <label class="text-sm text-[#9AA4B8]">Receiver balance before
+          <input id="receiverBefore" type="number" value="0" class="field w-full mt-1 px-3 py-2 mono text-sm" />
+        </label>
+        <label class="text-sm text-[#9AA4B8]">Receiver balance after
+          <input id="receiverAfter" type="number" value="8000" class="field w-full mt-1 px-3 py-2 mono text-sm" />
+        </label>
+        <label class="text-sm text-[#9AA4B8]">Hour of day
+          <input id="hour" type="number" min="0" max="23" value="3" class="field w-full mt-1 px-3 py-2 mono text-sm" />
+        </label>
+        <label class="text-sm text-[#9AA4B8]">Day of week
+          <input id="dow" type="number" min="0" max="6" value="6" class="field w-full mt-1 px-3 py-2 mono text-sm" />
+        </label>
+      </div>
+
+      <button onclick="scoreRisk()" class="btn text-sm text-white px-4 py-2 w-full">Score transaction</button>
+
+      <div id="riskResult" class="hidden mt-4 p-4 rounded-lg border">
+        <div class="flex items-baseline justify-between">
+          <span id="riskLabel" class="font-semibold text-sm"></span>
+          <span id="riskScore" class="mono text-2xl font-semibold"></span>
+        </div>
+        <p class="text-xs text-[#7A8499] mt-1 mono" id="riskModelVersion"></p>
+      </div>
+
+      <button onclick="explainModel()" class="text-sm text-[#7A8499] hover:text-[#E7EAF0] mt-4 underline underline-offset-4">
+        Show what the model weighs most →
+      </button>
+      <div id="explainResult" class="hidden mt-3 space-y-2"></div>
+    </section>
+
+    <!-- Compliance assistant -->
+    <section class="panel p-5">
+      <h2 class="font-semibold mb-1">Compliance Knowledge Assistant</h2>
+      <p class="text-sm text-[#7A8499] mb-4">Grounded answers with citations — refuses when it doesn't know.</p>
+
+      <div class="flex gap-2 mb-4">
+        <input id="question" type="text" placeholder="e.g. What is required of a BSA compliance officer?"
+          class="field flex-1 px-3 py-2 text-sm" />
+        <button onclick="askQuestion()" class="btn text-sm text-white px-4 py-2 whitespace-nowrap">Ask</button>
+      </div>
+
+      <div id="askLoading" class="hidden text-sm text-[#7A8499] mono">retrieving + generating…</div>
+      <div id="askResult" class="hidden">
+        <p id="answerText" class="text-sm leading-relaxed mb-3"></p>
+        <div id="sourcesList" class="flex flex-wrap gap-2"></div>
+      </div>
+    </section>
+
+    <!-- Pending approvals -->
+    <section class="panel p-5 lg:col-span-2">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="font-semibold">Pending Case Approvals</h2>
+          <p class="text-sm text-[#7A8499]">The agent can recommend closure — only a human can approve it.</p>
+        </div>
+        <button onclick="loadCases()" class="text-sm text-[#7A8499] hover:text-[#E7EAF0] underline underline-offset-4">refresh</button>
+      </div>
+      <div id="casesList" class="space-y-3">
+        <p class="text-sm text-[#5A6478]">No pending cases loaded yet — click refresh.</p>
+      </div>
+    </section>
+
+  </main>
+
+<script>
+const API = "http://127.0.0.1:8000";
+
+function apiKey() { return localStorage.getItem('apiKey') || document.getElementById('apiKey').value; }
+document.getElementById('apiKey').addEventListener('input', e => localStorage.setItem('apiKey', e.target.value));
+window.addEventListener('load', () => {
+  const saved = localStorage.getItem('apiKey');
+  if (saved) document.getElementById('apiKey').value = saved;
+  checkHealth();
+});
+
+async function checkHealth() {
+  const dot = document.getElementById('statusDot');
+  const text = document.getElementById('statusText');
+  try {
+    const res = await fetch(`${API}/v1/health`);
+    if (res.ok) { dot.style.background = '#3DDC97'; text.textContent = 'backend online'; }
+    else throw new Error();
+  } catch {
+    dot.style.background = '#E85A5A'; text.textContent = 'backend unreachable';
+  }
+}
+
+function headers() {
+  return { 'Content-Type': 'application/json', 'X-API-Key': apiKey() };
+}
+
+async function scoreRisk() {
+  const body = {
+    amount: Number(document.getElementById('amount').value),
+    sender_balance_before: Number(document.getElementById('senderBefore').value),
+    sender_balance_after: Number(document.getElementById('senderAfter').value),
+    receiver_balance_before: Number(document.getElementById('receiverBefore').value),
+    receiver_balance_after: Number(document.getElementById('receiverAfter').value),
+    hour_of_day: Number(document.getElementById('hour').value),
+    day_of_week: Number(document.getElementById('dow').value),
+    transaction_type: document.getElementById('txType').value,
+  };
+  const res = await fetch(`${API}/v1/risk`, { method: 'POST', headers: headers(), body: JSON.stringify(body) });
+  const data = await res.json();
+  if (!res.ok) { alert(data.detail || 'Request failed — check API key'); return; }
+
+  const box = document.getElementById('riskResult');
+  const isHigh = data.label === 'HIGH_RISK';
+  box.className = `mt-4 p-4 rounded-lg border ${isHigh ? 'risk-high' : 'risk-low'}`;
+  box.classList.remove('hidden');
+  document.getElementById('riskLabel').textContent = data.label.replace('_', ' ');
+  document.getElementById('riskScore').textContent = data.risk_score;
+  document.getElementById('riskModelVersion').textContent = data.model_version;
+
+  if (window.Motion) {
+    Motion.animate(box, { opacity: [0, 1], y: [8, 0] }, { duration: 0.3 });
+  }
+}
+
+async function explainModel() {
+  const res = await fetch(`${API}/v1/risk/explain`, { headers: headers() });
+  const data = await res.json();
+  if (!res.ok) { alert(data.detail || 'Request failed — check API key'); return; }
+
+  const container = document.getElementById('explainResult');
+  container.innerHTML = '';
+  container.classList.remove('hidden');
+  const top = data.feature_importances.slice(0, 6);
+  const max = top[0].importance;
+  top.forEach(f => {
+    const pct = Math.round((f.importance / max) * 100);
+    const row = document.createElement('div');
+    row.innerHTML = `
+      <div class="flex justify-between text-xs mb-1">
+        <span class="text-[#9AA4B8]">${f.feature}</span>
+        <span class="mono text-[#7A8499]">${f.importance}</span>
+      </div>
+      <div class="bar-track h-1.5"><div class="bar-fill" style="width:${pct}%"></div></div>`;
+    container.appendChild(row);
+  });
+}
+
+async function askQuestion() {
+  const question = document.getElementById('question').value.trim();
+  if (!question) return;
+  document.getElementById('askLoading').classList.remove('hidden');
+  document.getElementById('askResult').classList.add('hidden');
+
+  const res = await fetch(`${API}/v1/ask`, { method: 'POST', headers: headers(), body: JSON.stringify({ question }) });
+  const data = await res.json();
+  document.getElementById('askLoading').classList.add('hidden');
+  if (!res.ok) { alert(data.detail || 'Request failed — check API key'); return; }
+
+  document.getElementById('answerText').textContent = data.answer;
+  const sourcesEl = document.getElementById('sourcesList');
+  sourcesEl.innerHTML = data.sources.length
+    ? data.sources.map(s => `<span class="mono text-xs px-2 py-1 rounded bg-[#0D1017] border border-[#2A3140] text-[#7A8499]">${s.source} · #${s.chunk_index}</span>`).join('')
+    : '<span class="text-xs text-[#5A6478]">no sources — refused for lack of grounding</span>';
+
+  const resultBox = document.getElementById('askResult');
+  resultBox.classList.remove('hidden');
+  if (window.Motion) Motion.animate(resultBox, { opacity: [0, 1] }, { duration: 0.25 });
+}
+
+async function loadCases() {
+  const res = await fetch(`${API}/v1/cases/pending`, { headers: headers() });
+  const list = document.getElementById('casesList');
+  if (!res.ok) { list.innerHTML = '<p class="text-sm text-[#E85A5A]">Could not load cases — check API key.</p>'; return; }
+  const cases = await res.json();
+  if (!cases.length) { list.innerHTML = '<p class="text-sm text-[#5A6478]">No pending cases right now.</p>'; return; }
+
+  list.innerHTML = cases.map(c => `
+    <div class="flex items-center justify-between p-3 rounded-lg bg-[#0D1017] border border-[#2A3140]">
+      <div>
+        <p class="text-xs mono text-[#5A6478]">${c.id}</p>
+        <p class="text-sm mt-1">${c.notes || '(no notes)'}</p>
+      </div>
+      <div class="flex gap-2 shrink-0 ml-4">
+        <button onclick="decide('${c.id}', true)" class="text-sm px-3 py-1.5 rounded bg-[#3DDC97] text-[#0D1017] font-semibold">Approve</button>
+        <button onclick="decide('${c.id}', false)" class="text-sm px-3 py-1.5 rounded bg-[#2A3140] text-[#E7EAF0]">Reject</button>
+      </div>
+    </div>`).join('');
+}
+
+async function decide(caseId, approved) {
+  const res = await fetch(`${API}/v1/approvals/${caseId}`, { method: 'POST', headers: headers(), body: JSON.stringify({ approved }) });
+  if (!res.ok) { alert('Approval failed — check API key'); return; }
+  loadCases();
+}
+</script>
+</body>
+</html>
