@@ -2,6 +2,7 @@ import requests
 from rag.rerank import rerank
 from rag.hybrid_search import hybrid_search
 from rag.query_rewrite import rewrite_query
+from rag.search import semantic_search_with_scores
 
 OLLAMA_GENERATE_URL = "http://localhost:11434/api/generate"
 LLM_MODEL = "llama3.2"
@@ -74,26 +75,23 @@ def _call_llm(question: str, chunks: list):
 
 
 def generate_answer(question: str, retrieve_k: int = 15, final_k: int = 5):
-    """Runs the full RAG pipeline: rewrite, retrieve, gate, rerank, generate, retry-on-safety-misfire."""
     if not question or not question.strip():
         return "Please provide a question.", []
 
-    rewritten_question = rewrite_query(question)
-    scored_candidates = hybrid_search(rewritten_question, top_k=retrieve_k)
-
-    if not scored_candidates or scored_candidates[0][1] < RELEVANCE_THRESHOLD:
+    vector_check = semantic_search_with_scores(question, top_k=1)
+    if not vector_check or vector_check[0][1] > 0.58:
         return "I don't have enough information in the provided documents to answer that.", []
 
+    rewritten_question = rewrite_query(question)
+    scored_candidates = hybrid_search(rewritten_question, top_k=retrieve_k)
     candidates = [chunk for chunk, score in scored_candidates]
     chunks = rerank(question, candidates, top_n=final_k)
 
     answer = _call_llm(question, chunks)
-
     if any(marker in answer.lower() for marker in SAFETY_REFUSAL_MARKERS):
         answer = _call_llm(question, chunks)
 
     return answer, chunks
-
 
 if __name__ == "__main__":
     question = "What is required of a BSA compliance officer?"
