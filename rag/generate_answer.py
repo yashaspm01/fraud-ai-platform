@@ -2,11 +2,11 @@ import requests
 from rag.search import semantic_search
 from rag.rerank import rerank
 from rag.search import semantic_search_with_scores
-
+from rag.hybrid_search import hybrid_search
 
 OLLAMA_GENERATE_URL = "http://localhost:11434/api/generate"
 LLM_MODEL = "llama3.2"
-RELEVANCE_THRESHOLD = 0.55
+RELEVANCE_THRESHOLD = 0.15
 
 def build_prompt(question: str, chunks: list) -> str:
     context = "\n\n".join(
@@ -37,9 +37,9 @@ def generate_answer(question: str, retrieve_k: int = 15, final_k: int = 5):
     if not question or not question.strip():
         return "Please provide a question.", []
 
-    scored_candidates = semantic_search_with_scores(question, top_k=retrieve_k)
+    scored_candidates = hybrid_search(question, top_k=retrieve_k)
 
-    if not scored_candidates or scored_candidates[0][1] > RELEVANCE_THRESHOLD:
+    if not scored_candidates or scored_candidates[0][1] < RELEVANCE_THRESHOLD:
         return "I don't have enough information in the provided documents to answer that.", []
 
     candidates = [chunk for chunk, distance in scored_candidates]
