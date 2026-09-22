@@ -3,23 +3,29 @@ from database.connection import SessionLocal
 from database.models import DocumentChunk
 from rag.search import semantic_search_with_scores
 
+_all_chunks = None
+_bm25 = None
 
-def _load_all_chunks():
-    """Loads every chunk once for BM25 indexing."""
+
+def _load_index():
+    """Lazily loads and indexes all chunks on first real use, not at import time."""
+    global _all_chunks, _bm25
+    if _bm25 is not None:
+        return
+
     db = SessionLocal()
     try:
-        return db.query(DocumentChunk).all()
+        _all_chunks = db.query(DocumentChunk).all()
     finally:
         db.close()
 
-
-_all_chunks = _load_all_chunks()
-_tokenized = [c.content.lower().split() for c in _all_chunks]
-_bm25 = BM25Okapi(_tokenized)
+    tokenized = [c.content.lower().split() for c in _all_chunks]
+    _bm25 = BM25Okapi(tokenized)
 
 
 def bm25_search(query: str, top_k: int = 15):
     """Keyword-ranks all chunks against the query using BM25."""
+    _load_index()
     scores = _bm25.get_scores(query.lower().split())
     ranked = sorted(zip(_all_chunks, scores), key=lambda x: x[1], reverse=True)
     return ranked[:top_k]
@@ -27,6 +33,7 @@ def bm25_search(query: str, top_k: int = 15):
 
 def hybrid_search(query: str, top_k: int = 15, vector_weight: float = 0.6):
     """Combines vector and BM25 rankings into one score per chunk."""
+    _load_index()
     vector_results = semantic_search_with_scores(query, top_k=top_k * 2)
     bm25_results = bm25_search(query, top_k=top_k * 2)
 
