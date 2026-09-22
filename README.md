@@ -1,5 +1,5 @@
 # Fraud & Risk Operations Platform
-
+![CI](https://github.com/yashaspm01/fraud-ai-platform/actions/workflows/ci.yml/badge.svg)
 A 4-week AI Engineer build: one evolving system spanning ML risk scoring,
 RAG-grounded compliance knowledge, an agentic investigation workflow with a
 human approval gate, and production hardening — not four separate demos.

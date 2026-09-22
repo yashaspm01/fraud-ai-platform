@@ -589,3 +589,23 @@ to derive the ranking, instead of assuming a dict must wrap a single array.
 
 **Status:** resolved — verified via debug output showing real parsed
 rankings instead of fallback warnings on every call.
+
+## [Week 4] CI/CD pipeline working — GitHub Actions
+
+**Context:** Added basic CI (lint-free test run on push/PR). Hit three real,
+distinct failures getting it green: Python version mismatch (local 3.12 vs
+CI default 3.11), missing env vars for import-time DB connection string
+construction, and a genuine architectural flaw — rag/hybrid_search.py
+connected to Postgres at module IMPORT time, not first use, making it
+impossible to safely import in any environment without a live database
+(CI, quick scripts, other tooling).
+
+**Fix:** Lazy-loaded the BM25 index (loads on first real call, not import) —
+this is a real, general fix (avoids the import-time I/O anti-pattern), not
+just a CI workaround. CI now runs feature-engineering and agent-tool-contract
+tests on every push, with dummy env vars for the two tests that construct
+(but don't use) a DB connection string; DB/model/RAG-dependent tests
+intentionally excluded from CI (documented reason: no live services in the
+clean runner) and remain part of the full local suite.
+
+**Status:** implemented and verified — CI green, 34s total runtime.
