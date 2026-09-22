@@ -22,3 +22,12 @@ jobs:
 
       - name: Run tests
         run: pytest tests/ -v --ignore=tests/test_database_constraints.py --ignore=tests/test_risk_model.py --ignore=tests/test_rag_search.py
+
+      - name: Run tests
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_db
+          POSTGRES_HOST: 127.0.0.1
+          API_KEY: test_api_key
+        run: pytest tests/ -v --ignore=tests/test_database_constraints.py --ignore=tests/test_risk_model.py --ignore=tests/test_rag_search.py
