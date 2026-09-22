@@ -572,3 +572,20 @@ discarded by a weaker downstream step having a bad sampling run.
 
 **Status:** resolved — golden-set eval (evaluation/rag_eval.py) passing 4/4
 consistently across repeated runs.
+
+## [Week 4] Reranker parsing bug found — model returns dict, not array, under format=json
+
+**Context:** Reranker was silently falling back to original order on every
+call — the "guarantee top hybrid hit survives reranking" safeguard from the
+prior fix masked this, so eval scores stayed mostly correct despite the
+reranker never actually functioning.
+
+**Root cause:** Ollama's format=json constraint biases llama3.2 toward
+emitting {"index": score, ...} objects rather than the bare ordered array
+requested in the prompt, regardless of the explicit example format given.
+
+**Fix:** Parse dict output as index→score pairs, sort by score descending
+to derive the ranking, instead of assuming a dict must wrap a single array.
+
+**Status:** resolved — verified via debug output showing real parsed
+rankings instead of fallback warnings on every call.

@@ -26,20 +26,23 @@ relevant to the question. Example format: [3, 0, 4, 1, 2]
 Do not include any other text."""
 
     try:
-        response = requests.post(OLLAMA_GENERATE_URL, json={"model": LLM_MODEL, "prompt": prompt, "stream": False}, timeout=30)
+        response = requests.post(OLLAMA_GENERATE_URL,json={"model": LLM_MODEL, "prompt": prompt, "stream": False, "format": "json", "options": {"temperature": 0.0}}, timeout=30)
         response.raise_for_status()
         raw_output = response.json()["response"].strip()
+        print("DEBUG - raw reranker output:", repr(raw_output))
     except requests.exceptions.RequestException as e:
         print(f"⚠️ Reranker service unavailable ({e}), falling back to original order")
         return chunks[:top_n]
 
     try:
-        ranked_indices = json.loads(raw_output)
-    except json.JSONDecodeError:
-        # If the LLM didn't return clean JSON, fall back to original order
-        # rather than crashing — a real reliability pattern, not just a hack.
-        print(f"⚠️ Reranker returned non-JSON output, falling back: {raw_output}")
+        parsed = json.loads(raw_output)
+        if isinstance(parsed, dict):
+            ranked_indices = [int(k) for k, v in sorted(parsed.items(), key=lambda item: item[1], reverse=True)]
+        else:
+            ranked_indices = [int(i) for i in parsed]
+    except (json.JSONDecodeError, ValueError, TypeError):
+        print(f"⚠️ Reranker returned unusable output, falling back: {raw_output}")
         ranked_indices = list(range(len(chunks)))
 
-    reranked_chunks = [chunks[i] for i in ranked_indices if i < len(chunks)]
+    reranked_chunks = [chunks[i] for i in ranked_indices if 0 <= i < len(chunks)]
     return reranked_chunks[:top_n]

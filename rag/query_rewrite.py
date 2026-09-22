@@ -18,7 +18,7 @@ Rewritten:"""
     try:
         response = requests.post(
             OLLAMA_GENERATE_URL,
-            json={"model": LLM_MODEL, "prompt": prompt, "stream": False},
+            json={"model": LLM_MODEL, "prompt": prompt, "stream": False, "options": {"temperature": 0.0}},
             timeout=30,
         )
         response.raise_for_status()

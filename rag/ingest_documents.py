@@ -4,6 +4,7 @@ from pypdf import PdfReader
 from sqlalchemy import create_engine, text
 from database.connection import SessionLocal, DATABASE_URL
 from database.models import DocumentChunk
+from rag.cache import get_cached_embedding, set_cached_embedding
 
 OLLAMA_URL = "http://localhost:11434/api/embeddings"
 EMBED_MODEL = "nomic-embed-text"
@@ -33,10 +34,15 @@ def chunk_text(text_content: str, chunk_size: int, overlap: int) -> list[str]:
 
 
 def embed(text_chunk: str) -> list[float]:
+    cached = get_cached_embedding(text_chunk)
+    if cached is not None:
+        return cached
     try:
         response = requests.post(OLLAMA_URL, json={"model": EMBED_MODEL, "prompt": text_chunk}, timeout=30)
         response.raise_for_status()
-        return response.json()["embedding"]
+        vector = response.json()["embedding"]
+        set_cached_embedding(text_chunk, vector)
+        return vector
     except requests.exceptions.RequestException as e:
         raise RuntimeError(f"Embedding service unavailable: {e}")
 

@@ -1,8 +1,9 @@
 import requests
 from rag.rerank import rerank
 from rag.hybrid_search import hybrid_search
-from rag.query_rewrite import rewrite_query
+#from rag.query_rewrite import rewrite_query
 from rag.search import semantic_search_with_scores
+from rag.cache import get_cached_answer, set_cached_answer
 
 OLLAMA_GENERATE_URL = "http://localhost:11434/api/generate"
 LLM_MODEL = "llama3.2"
@@ -61,7 +62,7 @@ def _call_llm(question: str, chunks: list):
     try:
         response = requests.post(
             OLLAMA_GENERATE_URL,
-            json={"model": LLM_MODEL, "prompt": prompt, "stream": False},
+            json={"model": LLM_MODEL, "prompt": prompt, "stream": False, "options": {"temperature": 0.3}},
             timeout=60,
         )
         response.raise_for_status()
@@ -79,21 +80,28 @@ def generate_answer(question: str, retrieve_k: int = 15, final_k: int = 5):
     if not question or not question.strip():
         return "Please provide a question.", []
 
+    cached = get_cached_answer(question)
+    if cached is not None:
+        return cached
+
     vector_check = semantic_search_with_scores(question, top_k=1)
     if not vector_check or vector_check[0][1] > 0.58:
         return "I don't have enough information in the provided documents to answer that.", []
 
-    rewritten_question = rewrite_query(question)
     original_results = hybrid_search(question, top_k=retrieve_k)
-    rewritten_results = hybrid_search(rewritten_question, top_k=retrieve_k) if rewritten_question != question else []
+    candidates = [chunk for chunk, score in original_results]
 
-    merged = {chunk.id: (chunk, score) for chunk, score in original_results}
-    for chunk, score in rewritten_results:
-        if chunk.id not in merged or score > merged[chunk.id][1]:
-            merged[chunk.id] = (chunk, score)
+#    rewritten_question = rewrite_query(question)
+#    rewritten_results = hybrid_search(rewritten_question, top_k=retrieve_k) if rewritten_question != question else []
 
-    ranked = sorted(merged.values(), key=lambda x: x[1], reverse=True)
-    candidates = [chunk for chunk, score in ranked]
+#    merged = {chunk.id: (chunk, score) for chunk, score in original_results}
+
+#    for chunk, score in rewritten_results:
+#        if chunk.id in merged and score > merged[chunk.id][1]:
+#            merged[chunk.id] = (chunk, score)
+
+#   ranked = sorted(merged.values(), key=lambda x: x[1], reverse=True)
+#    candidates = [chunk for chunk, score in ranked]
 
     if candidates:
         top_candidate = candidates[0]
@@ -106,6 +114,8 @@ def generate_answer(question: str, retrieve_k: int = 15, final_k: int = 5):
     answer = _call_llm(question, chunks)
     if any(marker in answer.lower() for marker in SAFETY_REFUSAL_MARKERS):
         answer = _call_llm(question, chunks)
+
+    set_cached_answer(question, answer, chunks)
 
     return answer, chunks
 
