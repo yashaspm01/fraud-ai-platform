@@ -541,3 +541,34 @@ concerns — the latter is what matters and is confirmed stable.
 **Status:** resolved. Real bug was a stray placeholder string, not a
 prompt-engineering shortfall — worth remembering to grep for that pattern
 after any prompt edit going forward.
+
+## [Week 4] RAG pipeline stabilized — three compounding non-determinism bugs found and fixed
+
+**Context:** Golden-set eval oscillated between 3/4 and 4/4 across multiple
+runs with no code changes in between, despite each individual fix looking
+correct in isolation.
+
+**Root causes found, in order of discovery:**
+1. Relevance gate checked a blended hybrid (vector+BM25) score, which BM25
+   could inflate for spurious keyword overlap even on fully unrelated
+   questions (e.g. "capital of France" scored 0.40 via BM25 noise). Fixed by
+   gating on pure vector distance only; hybrid scoring reserved for ranking.
+2. Query rewriting (an LLM call) is non-deterministic — same input produced
+   5 different rewrites across 5 runs. When the gate checked the rewritten
+   question instead of the original, an off-topic question could be
+   "rewritten" into something topic-adjacent and pass the gate. Fixed by
+   gating strictly on the user's original question, never the rewrite.
+3. The rewrite sometimes actively hurt retrieval on already-clear short
+   questions (e.g. "What is BSA/AML" rewritten into verbose phrasing lost
+   the glossary match). Fixed by merging original+rewritten search results
+   rather than replacing one with the other, then guaranteeing the single
+   top-scoring hybrid result survives the (also non-deterministic) LLM
+   reranking step, rather than trusting the reranker's full authority.
+
+**Lesson:** stacking multiple LLM-based pipeline steps (rewrite, rerank,
+generate) compounds non-determinism — each step needs an explicit
+tie-breaker or floor guaranteeing the strongest signal can't be silently
+discarded by a weaker downstream step having a bad sampling run.
+
+**Status:** resolved — golden-set eval (evaluation/rag_eval.py) passing 4/4
+consistently across repeated runs.

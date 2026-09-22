@@ -75,6 +75,7 @@ def _call_llm(question: str, chunks: list):
 
 
 def generate_answer(question: str, retrieve_k: int = 15, final_k: int = 5):
+    """Runs the full RAG pipeline: gate on original question, retrieve with original+rewritten merged, guarantee top hit survives reranking, generate with retry."""
     if not question or not question.strip():
         return "Please provide a question.", []
 
@@ -83,15 +84,31 @@ def generate_answer(question: str, retrieve_k: int = 15, final_k: int = 5):
         return "I don't have enough information in the provided documents to answer that.", []
 
     rewritten_question = rewrite_query(question)
-    scored_candidates = hybrid_search(rewritten_question, top_k=retrieve_k)
-    candidates = [chunk for chunk, score in scored_candidates]
-    chunks = rerank(question, candidates, top_n=final_k)
+    original_results = hybrid_search(question, top_k=retrieve_k)
+    rewritten_results = hybrid_search(rewritten_question, top_k=retrieve_k) if rewritten_question != question else []
+
+    merged = {chunk.id: (chunk, score) for chunk, score in original_results}
+    for chunk, score in rewritten_results:
+        if chunk.id not in merged or score > merged[chunk.id][1]:
+            merged[chunk.id] = (chunk, score)
+
+    ranked = sorted(merged.values(), key=lambda x: x[1], reverse=True)
+    candidates = [chunk for chunk, score in ranked]
+
+    if candidates:
+        top_candidate = candidates[0]
+        reranked_rest = rerank(question, candidates[1:], top_n=final_k - 1)
+        chunks = [top_candidate] + [c for c in reranked_rest if c.id != top_candidate.id]
+        chunks = chunks[:final_k]
+    else:
+        chunks = []
 
     answer = _call_llm(question, chunks)
     if any(marker in answer.lower() for marker in SAFETY_REFUSAL_MARKERS):
         answer = _call_llm(question, chunks)
 
     return answer, chunks
+
 
 if __name__ == "__main__":
     question = "What is required of a BSA compliance officer?"
@@ -100,3 +117,4 @@ if __name__ == "__main__":
     print("Sources used:")
     for c in sources:
         print(f"- {c.source_document}, chunk #{c.chunk_index}")
+
