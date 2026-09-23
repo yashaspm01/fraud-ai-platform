@@ -86,7 +86,12 @@ def generate_answer(question: str, retrieve_k: int = 15, final_k: int = 5):
 
     vector_check = semantic_search_with_scores(question, top_k=1)
     if not vector_check or vector_check[0][1] > 0.58:
-        return "I don't have enough information in the provided documents to answer that.", []
+        return (
+            "I don't have enough information in the provided compliance documents to "
+            "answer that. This assistant only answers questions about BSA/AML "
+            "regulations and policy — for transaction risk scoring, use the "
+            "Transaction Risk Score panel instead."
+        ), []
 
     original_results = hybrid_search(question, top_k=retrieve_k)
     candidates = [chunk for chunk, score in original_results]

@@ -14,6 +14,7 @@ from rag.generate_answer import generate_answer
 from rag.search import semantic_search
 from agents.approval import approve_case_closure
 from pipelines.feature_engineering import build_inference_features
+from typing import Literal
 
 app = FastAPI(title="Fraud Risk Scoring Service")
 
@@ -21,6 +22,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 logger = logging.getLogger("fraud_ops")
 
 API_KEY = os.getenv("API_KEY")
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://127.0.0.1:5500,http://localhost:5500").split(",")
 
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
@@ -28,11 +30,10 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # fine for local demo; would be locked to a real domain in production
-    allow_methods=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
-
 
 class RiskRequest(BaseModel):
     amount: float = Field(..., gt=0)
@@ -42,8 +43,7 @@ class RiskRequest(BaseModel):
     receiver_balance_after: float
     hour_of_day: int = Field(..., ge=0, le=23)
     day_of_week: int = Field(..., ge=0, le=6)
-    transaction_type: str
-
+    transaction_type: Literal["CASH_IN", "CASH_OUT", "DEBIT", "PAYMENT", "TRANSFER"]
 
 class SearchRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=500)
