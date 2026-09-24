@@ -35,7 +35,7 @@
     <div class="flex items-center gap-3">
       <span id="statusDot" class="w-2.5 h-2.5 rounded-full bg-[#5A6478]"></span>
       <span id="statusText" class="text-sm text-[#7A8499]">checking backend…</span>
-      <input id="apiKey" type="password" placeholder="X-API-Key"
+      <input id="apiKey" type="password" placeholder="Enter your API key to use this demo"
         class="field text-sm mono px-3 py-1.5 w-56" />
     </div>
   </header>
@@ -128,7 +128,7 @@
   </main>
 
 <script>
-const API = "http://127.0.0.1:8000";
+const API = "https://fraud-ai-platform.onrender.com";
 
 function apiKey() { return localStorage.getItem('apiKey') || document.getElementById('apiKey').value; }
 document.getElementById('apiKey').addEventListener('input', e => localStorage.setItem('apiKey', e.target.value));

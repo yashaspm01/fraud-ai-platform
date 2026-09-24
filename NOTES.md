@@ -609,3 +609,22 @@ intentionally excluded from CI (documented reason: no live services in the
 clean runner) and remain part of the full local suite.
 
 **Status:** implemented and verified — CI green, 34s total runtime.
+
+## [Week 4] Deployed to production — Render
+
+**Context:** Deployed the full platform to Render's free tier. Ollama
+(RAG/agent LLM) isn't available in this environment — deliberate,
+documented trade-off: risk-scoring endpoints work fully in production;
+RAG/agent endpoints gracefully return "service unavailable" thanks to
+the timeout/fallback handling built earlier, rather than crashing.
+
+**Verified live:** /v1/health, /v1/risk (real HIGH_RISK result against
+cloud Postgres + pgvector), /v1/risk/explain.
+
+**Known limitation:** free tier spins down after inactivity (~50s cold
+start on next request) — acceptable for a portfolio demo, would need a
+paid tier or a keep-alive ping for anything more.
+
+**Live URL:** https://fraud-ai-platform.onrender.com
+
+**Status:** implemented — platform genuinely live and reachable.
