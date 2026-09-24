@@ -129,6 +129,6 @@ def run_agent(goal: str):
     return None, history
 
 if __name__ == "__main__":
-    transaction_id = "ab1c9198-0322-44eb-b848-b00e290dc033"
+    transaction_id = " 3c2692ef-9e52-4f78-868f-00e090ffdc6d"
     goal = f"Investigate the transaction with id {transaction_id}: amount=8000, sender_balance_before=8000, sender_balance_after=0, hour_of_day=2. Determine the risk, check relevant policy, and if you conclude the case should be closed, you MUST call recommend_case_closure with this transaction_id and your reasoning."
     run_agent(goal)

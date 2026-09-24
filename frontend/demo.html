@@ -132,6 +132,7 @@ const API = "https://fraud-ai-platform.onrender.com";
 
 function apiKey() { return localStorage.getItem('apiKey') || document.getElementById('apiKey').value; }
 document.getElementById('apiKey').addEventListener('input', e => localStorage.setItem('apiKey', e.target.value));
+document.getElementById('statusText').textContent = 'connecting… (free tier may take up to 50s to wake up)';
 window.addEventListener('load', () => {
   const saved = localStorage.getItem('apiKey');
   if (saved) document.getElementById('apiKey').value = saved;

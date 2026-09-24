@@ -4,6 +4,11 @@ A 4-week AI Engineer build: one evolving system spanning ML risk scoring,
 RAG-grounded compliance knowledge, an agentic investigation workflow with a
 human approval gate, and production hardening — not four separate demos.
 
+## Live Demo
+- Frontend: https://fraud-ai-platform-frontend.onrender.com
+- API: https://fraud-ai-platform.onrender.com
+- Note: free-tier hosting — first request after inactivity may take ~50s to wake up.
+
 ## Architecture
 See `docs/PRD.md` for full architecture, requirements, and the week-by-week
 decision log in `NOTES.md` — every real bug, incident, and design trade-off
