@@ -6,7 +6,7 @@ wrong, add a NEW entry explaining what changed and why. That history has value.
 
 ## How to write an entry
 ```
-## [Week X, Day Y] Feature/Decision Title
+## [Week X'1, Day Y] Feature/Decision Title
 
 **Context:** What problem were we solving? What was already in place?
 
