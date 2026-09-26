@@ -93,6 +93,8 @@ def search_documents(request: Request, request_body: SearchRequest):
                 for r in results
             ]
         }
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail="Search requires a local LLM service not available in this deployment.")
     except Exception as e:
         logger.error(f"search_failed error={e}")
         raise HTTPException(status_code=500, detail=str(e))
