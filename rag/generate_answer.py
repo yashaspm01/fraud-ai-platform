@@ -60,16 +60,11 @@ def _call_llm(question: str, chunks: list):
     """Sends the built prompt to Ollama and returns the cleaned answer text."""
     prompt = build_prompt(question, chunks)
     try:
-        response = requests.post(
-            OLLAMA_GENERATE_URL,
-            json={"model": LLM_MODEL, "prompt": prompt, "stream": False, "options": {"temperature": 0.3}},
-            timeout=60,
-        )
-        response.raise_for_status()
-    except requests.exceptions.RequestException as e:
+        raw_output = generate_text(prompt, temperature=0.3)
+
+    except Exception as e:
         return f"I don't have enough information in the provided documents to answer that. (Service temporarily unavailable: {e})"
 
-    raw_output = response.json()["response"]
     if "Answer:" in raw_output:
         return raw_output.split("Answer:", 1)[1].strip()
     return raw_output.strip()
