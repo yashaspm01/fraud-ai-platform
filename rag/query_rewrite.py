@@ -1,7 +1,7 @@
 import requests
 
-OLLAMA_GENERATE_URL = "http://localhost:11434/api/generate"
-LLM_MODEL = "llama3.2"
+from rag.llm_client import generate_text
+
 
 
 def rewrite_query(question: str) -> str:
@@ -16,13 +16,7 @@ Question: {question}
 Rewritten:"""
 
     try:
-        response = requests.post(
-            OLLAMA_GENERATE_URL,
-            json={"model": LLM_MODEL, "prompt": prompt, "stream": False, "options": {"temperature": 0.0}},
-            timeout=30,
-        )
-        response.raise_for_status()
-        rewritten = response.json()["response"].strip()
+        rewritten = generate_text(prompt, temperature=0.0).strip()
         return rewritten if rewritten else question
-    except requests.exceptions.RequestException:
+    except Exception as e:
         return question

@@ -5,9 +5,9 @@ from sqlalchemy import create_engine, text
 from database.connection import SessionLocal, DATABASE_URL
 from database.models import DocumentChunk
 from rag.cache import get_cached_embedding, set_cached_embedding
+from rag.llm_client import embed_text
+from rag.cache import get_cached_embedding, set_cached_embedding
 
-OLLAMA_URL = "http://localhost:11434/api/embeddings"
-EMBED_MODEL = "nomic-embed-text"
 
 CHUNK_SIZE = 800      # characters per chunk
 CHUNK_OVERLAP = 100   # characters shared between consecutive chunks
@@ -34,17 +34,13 @@ def chunk_text(text_content: str, chunk_size: int, overlap: int) -> list[str]:
 
 
 def embed(text_chunk: str) -> list[float]:
+    """Embeds a chunk for storage, using the configured provider, with caching."""
     cached = get_cached_embedding(text_chunk)
     if cached is not None:
         return cached
-    try:
-        response = requests.post(OLLAMA_URL, json={"model": EMBED_MODEL, "prompt": text_chunk}, timeout=30)
-        response.raise_for_status()
-        vector = response.json()["embedding"]
-        set_cached_embedding(text_chunk, vector)
-        return vector
-    except requests.exceptions.RequestException as e:
-        raise RuntimeError(f"Embedding service unavailable: {e}")
+    vector = embed_text(text_chunk, input_type="search_document")
+    set_cached_embedding(text_chunk, vector)
+    return vector
 
 def store_chunks(source_document: str, chunks: list[str]):
     db = SessionLocal()

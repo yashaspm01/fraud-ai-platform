@@ -1,11 +1,11 @@
 from database.connection import SessionLocal
 from database.models import DocumentChunk
 from rag.ingest_documents import embed  # reuse the same embedding function
+from rag.llm_client import embed_text
 
 
 def semantic_search(query: str, top_k: int = 5):
-    query_vector = embed(query)
-
+    query_vector = embed_text(query, input_type="search_query")
     db = SessionLocal()
     try:
         results = (
@@ -19,7 +19,7 @@ def semantic_search(query: str, top_k: int = 5):
         db.close()
 
 def semantic_search_with_scores(query: str, top_k: int = 15):
-    query_vector = embed(query)
+    query_vector = embed_text(query, input_type="search_query")
     db = SessionLocal()
     try:
         results = (

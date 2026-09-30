@@ -1,8 +1,7 @@
 import json
 import requests
 
-OLLAMA_GENERATE_URL = "http://localhost:11434/api/generate"
-LLM_MODEL = "llama3.2"
+from rag.llm_client import generate_text
 
 
 def rerank(query: str, chunks: list, top_n: int = 5) -> list:
@@ -26,11 +25,9 @@ relevant to the question. Example format: [3, 0, 4, 1, 2]
 Do not include any other text."""
 
     try:
-        response = requests.post(OLLAMA_GENERATE_URL,json={"model": LLM_MODEL, "prompt": prompt, "stream": False, "format": "json", "options": {"temperature": 0.0}}, timeout=30)
-        response.raise_for_status()
-        raw_output = response.json()["response"].strip()
+        raw_output = generate_text(prompt, temperature=0.0, timeout=30).strip()
         print("DEBUG - raw reranker output:", repr(raw_output))
-    except requests.exceptions.RequestException as e:
+    except Exception as e:
         print(f"⚠️ Reranker service unavailable ({e}), falling back to original order")
         return chunks[:top_n]
 

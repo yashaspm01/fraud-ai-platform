@@ -5,8 +5,6 @@ from rag.hybrid_search import hybrid_search
 from rag.search import semantic_search_with_scores
 from rag.cache import get_cached_answer, set_cached_answer
 
-OLLAMA_GENERATE_URL = "http://localhost:11434/api/generate"
-LLM_MODEL = "llama3.2"
 RELEVANCE_THRESHOLD = 0.15
 SAFETY_REFUSAL_MARKERS = ["can't provide", "cannot provide", "can't assist", "unable to provide guidance"]
 

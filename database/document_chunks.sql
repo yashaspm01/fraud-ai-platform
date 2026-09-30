@@ -6,7 +6,7 @@ CREATE TABLE document_chunks (
     source_document TEXT NOT NULL,
     chunk_index     INTEGER NOT NULL,
     content         TEXT NOT NULL,
-    embedding       vector(768) NOT NULL,
+    embedding       vector(1024) NOT NULL,
     created_on      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
