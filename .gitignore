@@ -8,3 +8,5 @@ __pycache__/
 pipelines/data/raw/
 models/artifacts/
 *.zip
+.env.local.backup
+.env.*.backup
